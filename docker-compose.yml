@@ -1,0 +1,12 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - "8000:8000"  # Flask OCR + check_pronunciation
+      - "5000:5000"  # WebSocket live transcribe
+    env_file:
+      - .env
+    restart: unless-stopped
