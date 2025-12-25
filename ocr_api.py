@@ -16,11 +16,21 @@ if not API_KEYS:
 app = Flask(__name__)
 
 OCR_PROMPT = """
-You are an OCR engine.
-Read all the text in this document.
+You are an OCR engine and a linguistic expert.
+Analyze the image and extract English vocabulary or text.
 
-Return only the exact text you see as a single plain string.
-Do not add any explanation, labels, markdown, or summary.
+Return the result strictly as a valid JSON list.
+Do not include any markdown formatting (no ```json or ```).
+The output must be a list of objects with the following structure:
+[
+  {
+    "text_en": "string",
+    "meaning_vi": "string",
+    "part_of_speech": "string",
+    "ipa": "string",
+    "example_sentence": "string"
+  }
+]
 """
 
 def generate_with_fallback(path: str):
@@ -34,8 +44,18 @@ def generate_with_fallback(path: str):
         # Upload file và gọi API
         uploaded = genai.upload_file(path)
         response = model.generate_content([OCR_PROMPT, uploaded])
-        
-        return response
+        # return jsonify({"text": response.text})
+        # Clean up potential markdown formatting from Gemini
+        cleaned_text = response.text.strip()
+        if cleaned_text.startswith("```json"):
+            cleaned_text = cleaned_text[7:]
+        elif cleaned_text.startswith("```"):
+            cleaned_text = cleaned_text[3:]
+        if cleaned_text.endswith("```"):
+            cleaned_text = cleaned_text[:-3]
+            
+        data = json.loads(cleaned_text.strip())
+        return jsonify(data)
 
     except Exception as e:
         # Vì chỉ có 1 key, nếu lỗi thì ném lỗi ra luôn để server biết mà xử lý
