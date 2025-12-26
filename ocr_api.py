@@ -1,5 +1,6 @@
 from difflib import SequenceMatcher
 import os
+import json
 import tempfile
 import google.generativeai as genai
 from flask import Flask, request, jsonify
@@ -44,18 +45,8 @@ def generate_with_fallback(path: str):
         # Upload file và gọi API
         uploaded = genai.upload_file(path)
         response = model.generate_content([OCR_PROMPT, uploaded])
-        # return jsonify({"text": response.text})
-        # Clean up potential markdown formatting from Gemini
-        cleaned_text = response.text.strip()
-        if cleaned_text.startswith("```json"):
-            cleaned_text = cleaned_text[7:]
-        elif cleaned_text.startswith("```"):
-            cleaned_text = cleaned_text[3:]
-        if cleaned_text.endswith("```"):
-            cleaned_text = cleaned_text[:-3]
-            
-        data = json.loads(cleaned_text.strip())
-        return jsonify(data)
+        
+        return response
 
     except Exception as e:
         # Vì chỉ có 1 key, nếu lỗi thì ném lỗi ra luôn để server biết mà xử lý
@@ -75,7 +66,19 @@ def ocr_endpoint():
 
     try:
         response = generate_with_fallback(path)
-        return jsonify({"text": response.text})
+        # return jsonify({"text": response.text})
+        # Clean up potential markdown formatting from Gemini
+        cleaned_text = response.text.strip()
+        if cleaned_text.startswith("```json"):
+            cleaned_text = cleaned_text[7:]
+        elif cleaned_text.startswith("```"):
+            cleaned_text = cleaned_text[3:]
+        if cleaned_text.endswith("```"):
+            cleaned_text = cleaned_text[:-3]
+            
+        data = json.loads(cleaned_text.strip())
+        return jsonify(data)
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
